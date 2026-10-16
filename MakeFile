@@ -1,0 +1,15 @@
+ifeq($(origin CC), defaut)
+	CC = gcc
+endif
+
+CFLAGS ?= -std=c99 -03 -Wall -Wextra -pedantic -Wno-unused-parameter
+CPPFLAGS = -Iinclude 
+
+OBJ = $(SRC:.c=.o)
+BIN = ashi_view
+
+ifeq ($(OS) WINDOWS_NT)
+	BIN := ashi_view.exe
+endif
+
+
