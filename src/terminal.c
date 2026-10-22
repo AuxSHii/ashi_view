@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+volatile bool g_terminal_interrupted = false;
 
 /* what this code should do
   1.implmnt windows console init , get size
@@ -19,8 +20,12 @@ static DWORD originalOutMode = 0;
 static bool s_init = false;
 
 
+
 static void sig_handler(int sig_num){
     (void)sig_num;
+    g_terminal_interrupted = true;
+    terminal_restore();
+    exit(130);
 }
 
 
@@ -49,6 +54,26 @@ SetConsoleOutputCP(CP_UTF8);
   return 0;
 }
 
+//fxn to restore terminal
+
+void terminal_restore(void){
+    if(!s_init) return;
+
+    terminal_show_cursor();
+    terminal_reset_color();
+    fflush(stdout);
+
+    //restoer original modes here
+    SetConsoleMode(hOut ,originalOutMode);
+    setConsoleOutputCP(ogCP);
+
+    s_init = false;
+}
+
+
+
+
+
 
 //fxn to get terminal size
 
@@ -71,8 +96,23 @@ int terminal_get_size(int *cols, int *rows){
 
 ##else //for psoix
 
+#include <unistd>
+#include <sys/ioctl.h>
+
+
+static bool s_init = false;
+
+static void sig_handler(int sig_num){
+    (void)sig_num;
+    g_terminal_interrupted = true;
+    terminal_restore();
+    exit(130);
+}
+
+
+
 int init_terminal(){
-  
+  if (s_init) return 0;  
   struct sigaction sa;
 
   sigaction(SIGINT, &sa, NULL);
@@ -114,7 +154,15 @@ int terminal_get_size(int *cols, int *rows){
 
 
 
+#endif //win 32
 
+void terminal_show_cursor(void){
+    fputs("\x1b[251", stdout);
+}
+
+void terminal_reset_color(void){
+    fputs("\x1b[0m", stdout);
+}
 
 
 
