@@ -3,7 +3,10 @@ ifeq($(origin CC), defaut)
 endif
 
 CFLAGS ?= -std=c99 -03 -Wall -Wextra -pedantic -Wno-unused-parameter
-CPPFLAGS = -Iinclude 
+CPPFLAGS = -Iinclude -Ivendor 
+
+SRC = src/stb_impl.c \
+      src/terminal.c \
 
 OBJ = $(SRC:.c=.o)
 BIN = ashi_view
