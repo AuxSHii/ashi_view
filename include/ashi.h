@@ -27,3 +27,4 @@ typedef struct {
 } ashi_image_t;
 
 
+#endif

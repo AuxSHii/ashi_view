@@ -98,7 +98,7 @@ int ashi_image_load(const char *path, ashi_image_t *img){
     img->frame_count = 1;
     img->channels = 4;
     img->is_animated = false;
-    imh->frames = malloc(sizeof(ashi_frame_t));
+    img->frames = malloc(sizeof(ashi_frame_t));
     if(!img->frames){
         fprintf(stderr, "ashi_view: decode failed for '%s'\n", path);
         free(raw);
