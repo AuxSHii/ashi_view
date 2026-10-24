@@ -4,9 +4,12 @@ endif
 
 CFLAGS ?= -std=c99 -03 -Wall -Wextra -pedantic -Wno-unused-parameter
 CPPFLAGS = -Iinclude -Ivendor 
+LDLIBS = -lm
+
 
 SRC = src/stb_impl.c \
       src/terminal.c \
+	  src/resample.c \
 
 OBJ = $(SRC:.c=.o)
 BIN = ashi_view
