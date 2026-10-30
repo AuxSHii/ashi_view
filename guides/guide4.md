@@ -9,7 +9,7 @@ these names will make sense as you read more, but to put simply : to create a re
 By pairing the Unicode upper half-block character (`▀`) with 24-bit ANSI foreground and background colors, you will achieve 2× vertical subpixel density, turning any standard terminal into a high-fidelity image display. You will also implement an **ANSI escape deduplication state machine** and a 64KB I/O buffer to deliver blazing-fast rendering speeds without terminal emulator lag.
 
 
----
+
 
 ## 2. What You Should Understand Before Coding
 
@@ -106,6 +106,10 @@ you render two independent vertical pixels inside a single character cell:
 
 Because monospace fonts have a ~1:2 aspect ratio, splitting a cell into two vertical halves creates subpixels with a **1:1 square aspect ratio**.
 
+
+<img width="2603" height="816" alt="pixel divs" src="https://github.com/user-attachments/assets/907505fe-7a25-41df-aa5b-393661a1bd09" />
+
+<img width="2615" height="1195" alt="img" src="https://github.com/user-attachments/assets/a06003f3-74c0-4198-b7db-4c9163fd915a" />
 
 ### basics of coloring our unicode characters
 
