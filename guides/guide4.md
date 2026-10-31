@@ -185,6 +185,44 @@ When a pixel has an alpha value $A < 255$:
   * If top is transparent and bottom is opaque: output `▄` (`\xe2\x96\x84`, Lower Half Block) with `\x1b[49m`.
   The user's actual terminal background color shines through.
 
+### about 64kb buffer
+when i designed this engine, one of the biggest performance bottlenecks i had to solve was terminal rendering lag.
+to fix this, i built a custom stack-allocated caching buffer called OutBuf. here is the technical breakdown of what it is, 
+why we absolutely need it, and what it holds under the hood.
+
+1. what is its datatype?
+
+the buffer is defined using a simple custom structure (struct) that pairs a raw memory array with a size tracker:
+c```
+typedef struct {
+        char data[65536];
+            size_t len;
+} OutBuf;
+``
+
+• data[65536]: a flat array of standard 1-byte characters (char). it is exactly 64 kilobytes in size (\(64 \times 1024 = 65,536\) bytes).
+• len: a size counter (size_t) that tracks exactly how many bytes of text are currently sitting in the array at any given second.
+
+2. why do we need it here?
+as explained above
+in basic programming, you might use printf() or putchar() every time you want to output a character or a color change. in a high-performance graphics viewer, doing this is fatal.
+every time your program communicates with the terminal window, the operating system has to perform a system call (syscall). syscalls are incredibly expensive operations for the cpu. if our terminal grid is \(160 \times 80\), that is 12,800 cells. if we perform multiple print commands per cell, 60 times a second for an animation, we throw thousands of tiny syscalls at the system. this results in severe screen tearing, dropping frames, and massive cpu spikes.
+the 64kb buffer acts like a staging warehouse. instead of sending out thousands of tiny data packets, we bundle everything up into one massive shipping container in memory. only when that container is full (or the entire frame is done rendering) do we make one single syscall using fwrite(). this bypasses the standard c formatting overhead and flushes everything directly to the terminal parser at maximum speed.
+
+3. what exactly does it hold?
+
+it is crucial to understand that this buffer does not store raw pixel data (rgba values). by the time data enters OutBuf, all the mathematical pixel calculations, alpha blending, and color state tracking are already finished.
+this buffer holds raw, text-based terminal commands and symbols encoded as bytes. specifically:
+• ansi truecolor strings: raw ascii text sequences like \x1b[38;2;255;120;0m (foreground color) and \x1b[48;2;32;32;32m (background color).
+• unicode half-block graphics: the raw three-byte strings \xe2\x96\x80 (▀) and \xe2\x96\x84 (▄) which represent the physical subpixels.
+• structural console characters: plain text spaces (' ') for completely transparent segments, reset codes (\x1b[0m), and newlines (\n) at the end of each graphic row.
+
+4. how it works in the rendering loop
+
+in the execution flow, three inline helper functions manage this buffer:
+1. outbuf_append: drops text strings into data at the current len index. before copying, it checks if adding the new text will overflow the 65,536-byte limit.
+2. outbuf_flush: if the buffer is about to overflow (or the frame is finished), this function triggers fwrite(b->data, 1, b->len, stdout). this dumps the entire memory segment to the console and resets len back to 0.
+
 ---
 
 ## 3. Technologies / Libraries / APIs Used

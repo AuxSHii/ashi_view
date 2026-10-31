@@ -1,6 +1,12 @@
 #ifndef ASHI_H
 #define ASHI_H
 
+#include <stdint>
+#include <stdbool>
+#include <stddef.h>
+
+
+
 #define ASHI_VIEW_VERSION "1.0.0"
 
 //single decoded img frame (RGBA 8 bit)
@@ -25,6 +31,12 @@ typedef struct {
     uint8_t *raw_data;
     size_t raw_size; //store orgnl comp file bytes
 } ashi_image_t;
+
+
+//cmd line exec config[declare later]
+
+
+
 
 
 #endif
