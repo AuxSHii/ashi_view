@@ -75,7 +75,7 @@ static inline blend_pixel(const uint8_t *p, int x , int y , const ashi_bg_color_
             return;
         }
 
-//ALPHA BLENDING
+//ALPHA BLENDING [if  0 < alpha < 255] => checkerboard
         /* 
           bg rgb vals <- blend mode acc to vals 
 
@@ -94,8 +94,13 @@ static inline blend_pixel(const uint8_t *p, int x , int y , const ashi_bg_color_
             bg_r = bg_g = bg_b = 0;
         }
 
+        uint32_t inv_a = 255 -a;
+        *out_r = (uint8_t)(((uint32_t)p[0] * a + (uint32_t)bg_r * inv_a + 127) / 255);
+        *out_g = (uint8_t)(((uint32_t)p[1] * a + (uint32_t)bg_g * inv_a + 127) / 255);
+        *out_b = (uint8_t)(((uint32_t)p[2] * a + (uint32_t)bg_b * inv_a + 127) / 255);
 
 }
+
 
 
 
