@@ -103,6 +103,39 @@ static inline blend_pixel(const uint8_t *p, int x , int y , const ashi_bg_color_
 
 
 
+static void render_frame_halfblock(const uint8_t *pixels, int cols , int rows ,
+                                   const ashi_bg_color_t *bg , OutBuf *buf){
+    for(int r = 0; r < rows; r++){
+        int y_top = r * 2;
+        int y_bot = r * 2 + 1;
+
+        int cur_fg_r = -1, cur_fg_g = -1, cur_fg_b = -1;
+        int cur_bg_r = -1; cur_bg_g = -1, cur_bg_b = -1;
+        bool cur_fg_default = false;
+        bool cur_bg_default = false;
+
+        //loop for colums [left->right]
+        for(int c = 0; c < cols; c++){
+        const uint8_t *p_top = &pixels[(y_top * cols + c) * 4];
+        const uint8_t *p_bot = &pixels[(y_bot * cols + c) * 4];
+
+        uint8_t tr, tg, tb, br, bg_col, bb; //var for rgb {top+bott}
+        bool top_trans, bot_trans; //bool for are they transparent?
+        
+        blend_pixel(p_top, c, y_top, bg, &tr, &tg, &tb, &top_trans);
+        blend_pixel(p_bot, c, y_bot, bg, &br, &bg_col, bb ,&bot_trans);
+
+        //blend pixel will edit these vars 
+        if(top_trans && bot_trans){
+            if(!cur_bg_default || !cur_fg_default){
+                
+            }
+        }
+
+        }
+    }
+}
+
 
 
 
