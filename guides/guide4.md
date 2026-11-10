@@ -20,7 +20,7 @@ By pairing the Unicode upper half-block character (`▀`) with 24-bit ANSI foreg
 ### what is unicode and why [you can skip some theory but its always good to atleast have an idea about this]
 
 unicode is a universal coding standard designed to give every single character, letter, symbol, and emoji across the world a unique number, no matter the computer platform, program, or language.
-in the early days of computing, computers used a system called ascii, which could only store 128 characters—basically just standard english letters, numbers, and basic punctuation. if you wanted to display special symbols, math operators, or characters from other languages like japanese, arabic, or hindi, old computers would break and display garbled text because they lacked a shared system.
+in the early days of computing, computers used a system called ascii, which could only store 128 characters , basically just standard english letters, numbers, and basic punctuation. if you wanted to display special symbols, math operators, or characters from other languages like japanese, arabic, or hindi, old computers would break and display garbled text because they lacked a shared system.
 unicode fixed this by creating a massive, single directory that currently maps well over 100,000 unique characters. it allows computers everywhere to agree that a specific number always represents the same exact thing. in our tool, we use unicode because standard ascii doesn't have the special half-block shapes (▀ and ▄) we need to trick the terminal into drawing pixels.[more on that next]
 
 ### why unicode here?
@@ -29,7 +29,7 @@ unicode is used in this ashi_view ,
  when a user is running a standard terminal environment that doesn't support direct graphic rendering protocols like kitty or iterm2. when someone uses a regular console, tmux, or connects over ssh, the tool cannot send raw image data directly to the screen. instead, it falls back to a clever trick that converts the image into text blocks, and this is exactly where unicode comes into play.
 
 
-we use specific unicode characters—specifically the upper half-block ▀ and the bottom half-block ▄—to solve a physical limitation of terminal text fonts. normally, terminal characters are twice as tall as they are wide. if you tried to display a square pixel using a full solid block character, the image would look squashed and heavily distorted.
+we use specific unicode characters specifically the upper half-block ▀ and the bottom half-block ▄ to solve a physical limitation of terminal text fonts. normally, terminal characters are twice as tall as they are wide. if you tried to display a square pixel using a full solid block character, the image would look squashed and heavily distorted.
 
 by printing the unicode upper half-block ▀, we split a single tall character cell into two perfect, square subpixels. we can then use standard terminal text commands to set the foreground color for the top half and the background color for the bottom half. unicode is what gives us the building blocks to double our vertical resolution and display sharp, proportional images out of pure text.
 
@@ -50,9 +50,9 @@ things to know ;)
 
 Rasterization in Computer Graphics
 
-• conversion process: rasterization is the algorithmic stage in the 3D rendering pipeline where continuous geometric models (like polygons, 3D triangles, or lines) are converted into discrete screen-space pixels.
-• algorithms: Uses specific mathematical procedures like Bresenham's line algorithm or midpoint circle algorithm to map shapes onto the pixel grid.
-• frame buffer: The resulting pixel values are stored in a frame buffer before being refreshed and displayed on a monitor.
+• conversion process: rasterization is the algorithmic stage in the 3D rendering pipeline where continuous geometric models (like polygons, 3D triangles, or lines) are converted into discrete screen-space pixels.  
+• algorithms: Uses specific mathematical procedures like Bresenham's line algorithm or midpoint circle algorithm to map shapes onto the pixel grid.  
+• frame buffer: The resulting pixel values are stored in a frame buffer before being refreshed and displayed on a monitor.  
 
 read more on wiki:
 
@@ -67,7 +67,7 @@ so here is how we use a raster in this specific file.
  the term pixels in the code refers to a flat array in memory that holds all the color data for the image.[which we already have in our dt] because a terminal can only show text characters, we have to treat the terminal screen as a custom grid of pixels. since terminal characters are taller than they are wide, we look at... the raster data "two vertical rows at a time.""
  as previously discussed.
 
-in function render_frame_halfblock that we are gonna write, we run a nested loop that moves down the rows and across the columns of the image. inside this loop, we calculate the memory offset using the formula (y * cols + c) * 4. this points us directly to the red, green, blue, and alpha values for both a top pixel and a bottom pixel.
+in function render_frame_halfblock that we are gonna write, we run a nested loop that moves down the rows and across the columns of the image. inside this loop, we calculate the memory offset using the formula `(y * cols + c) * 4`. this points us directly to the red, green, blue, and alpha values for both a top pixel and a bottom pixel.
 
 in function blend_pixel that we are gonna write, we check if those pixels have transparency. if they do, we use math to blend the pixel colors with a solid or checkerboard background before drawing. once we have the clean colors, we use standard ansi text codes to paint the top color as the foreground and the bottom color as the background, then.. we print a half-block character.
 
@@ -79,14 +79,14 @@ thats pretty much the gist of it , lets talk more about concepts and techniques 
 
 ### about use of hex:
 
-when you see \x inside the code, it stands for hexadecimal (hex for short). it is a direct way for a programme to tell the computer exactly what raw bytes of data to send down the pipeline, rather than typing out human text.
-in c, if you write a normal letter like "a", the computer understands it perfectly. but if you want to write a special symbol from the Unicode Standard like our half-blocks—you cannot easily type that with a standard keyboard. instead, we use \x followed by two numbers or letters to represent the exact raw byte value.
+when you see `\x` inside the code, it stands for hexadecimal (hex for short). it is a direct way for a programme to tell the computer exactly what raw bytes of data to send down the pipeline, rather than typing out human text.  
+in c, if you write a normal letter like "a", the computer understands it perfectly. but if you want to write a special symbol from the Unicode Standard like our half-blocks—you cannot easily type that with a standard keyboard. instead, we use \x followed by two numbers or letters to represent the exact raw byte value.  
 
 look in code:
 
-• \xe2\x96\x80 is the exact byte sequence for the upper half-block ▀ character.
-• \xe2\x96\x84 is the exact byte sequence for the lower half-block ▄ character.
-• \x1b is the raw hex value for the escape code, which tells the terminal window that a color control command is coming instead of normal printable text.
+• `\xe2\x96\x80` is the exact byte sequence for the upper half-block ▀ character.  
+• `\xe2\x96\x84` is the exact byte sequence for the lower half-block ▄ character  
+• `\x1b` is the raw hex value for the escape code, which tells the terminal window that a color control command is coming instead of normal printable text.  
 
 lets talk more about tha blocks & rendring them:
 
@@ -180,7 +180,7 @@ When a pixel has an alpha value $A < 255$:
 * **Checkerboard Mode (`--bg checker`):**
   A 2×2 subpixel checkerboard pattern alternates between two dark neutral grays (`#242424` and `#383838`).
   Spatial pattern formula:
- $$\text{checker} = \left(\left\lfloor \frac{x}{2} \right\rfloor \oplus \left\lfloor \frac{y}{2} \right\rfloor\right) \ \& \ 1$$
+$$\text{checker} = \left(\left\lfloor \frac{x}{2} \right\rfloor \oplus \left\lfloor \frac{y}{2} \right\rfloor\right) \ \& \ 1$$
 
   Alpha blending formula:
   $$C_{\text{out}} = \frac{C_{\text{src}} \times A + C_{\text{bg}} \times (255 - A) + 127}{255}$$
