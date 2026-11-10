@@ -128,7 +128,7 @@ static void render_frame_halfblock(const uint8_t *pixels, int cols , int rows ,
         //blend pixel will edit these vars 
         if(top_trans && bot_trans){
             if(!cur_bg_default || !cur_fg_default){
-                
+                outbuf_append_str(buf, "\x1b[0m");
             }
         }
 

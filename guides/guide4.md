@@ -40,7 +40,7 @@ a raster in comp sci and graphics is a rectangular grid of discrete picture elem
 
 things to know ;)
 
-• Pixels: the smallest addressable units of a raster grid, holding individual color components (such as Red, Green, and Blue—RGB)
+• Pixels: the smallest addressable units of a raster grid, holding individual color components (such as Red, Green, and Blue --> RGB)
 
 • Resolution: defined by the grid's dimensions (number of columns by number of rows) or density (pixels per inch / PPI).
 
@@ -163,22 +163,25 @@ okk lets move on.. to topic at hands.
 
 when people specifically talk about managing the active color states to avoid printing redundant bytes, they call it an ansi state tracking machine or color caching.
 
-you will find this implemented under the hood of several major tools:
-• terminal user interface libs:  modern libs like Ratatui (writtn in rust) or old-school c libs like ncurses rely entirely on differential rendering. they keep a virtual screen buffer of what should be on the screen, compare it against what is already there, and only send changes.
-• popular cli media tools: command-line video players and image viewers like chafa, timg, and mpv (when used directly in a console mode)[i also wrote a batch script for its low end alternative , check out my github] use this state tracking method to stream fluid video frames without causing severe lag or breaking the terminal emulator's text parser.
+you will find this implemented under the hood of several major tools:  
+• terminal user interface libs:  modern libs like Ratatui (writtn in rust) or old-school c libs like ncurses rely entirely on differential rendering. they keep a virtual screen buffer of what should be on the screen, compare it against what is already there, and only send changes.  
+• popular cli media tools: command-line video players and image viewers like chafa, timg, and mpv (when used directly in a console mode)[i also wrote a batch script for its low end alternative , check out my github] use this state tracking method to stream fluid video frames without causing severe lag or breaking the terminal emulator's text parser.  
 
 we use it here because terminal parsers are notoriously slow at translating text strings into graphical color states. if we blindly spit out raw codes for every single box, we cause ..
 
-bandwidth choke i.e. {when a system tries to send more data down a communication pipeline than it can handle at once, causing the data to back up and the program to slow down or lag}.
 
- by tracking the current states in cur_fg and cur_bg, we reduce the workload dramatically, leaving just a thin, clean stream of data for the terminal to decode.
+
+bandwidth choke i.e. {when a system tries to send more data down a communication pipeline than it can handle at once, causing the data to back up and the program to slow down or lag}.  
+
+ by tracking the current states in cur_fg and cur_bg, we reduce the workload dramatically, leaving just a thin, clean stream of data for the terminal to decode.  
 
 ### Transparency Compositing
 When a pixel has an alpha value $A < 255$:
 * **Checkerboard Mode (`--bg checker`):**
   A 2×2 subpixel checkerboard pattern alternates between two dark neutral grays (`#242424` and `#383838`).
   Spatial pattern formula:
-  $$\text{checker} = \left(\left(\frac{x}{2}\right) \oplus \left(\frac{y}{2}\right)\right) \ \& \ 1$$
+ $$\text{checker} = \left(\left\lfloor \frac{x}{2} \right\rfloor \oplus \left\lfloor \frac{y}{2} \right\rfloor\right) \ \& \ 1$$
+
   Alpha blending formula:
   $$C_{\text{out}} = \frac{C_{\text{src}} \times A + C_{\text{bg}} \times (255 - A) + 127}{255}$$
 * **Native Terminal Pass-Through (`--bg none`):**
@@ -188,17 +191,18 @@ When a pixel has an alpha value $A < 255$:
   * If top is transparent and bottom is opaque: output `▄` (`\xe2\x96\x84`, Lower Half Block) with `\x1b[49m`.
   The user's actual terminal background color shines through.
 
-### if you had an panic attack reading about alpha-blending then read this ;)
+### if you had a panic attack reading about alpha-blending then read this ;)
 
 
 #### alpha blending: basics + the big idea
 
 imagine you have a sheet of clear glass. if you paint a solid, thick layer of red paint on it, you cannot see anything behind it. but if you take that red paint, mix it with a lot of water, and brush it on, the glass becomes a translucent red tint. you can still see the objects behind the glass, but their colors are now mixed with the red paint.
-in digital graphics, alpha blending is the exact mathematical process of mixing a foreground color (the transparent paint) with a background color (whatever is behind the glass) based on an alpha value (\(\alpha \)).
-the alpha value represents the level of opacity:
-• \(\alpha = 255\) (or \(1.0\)): completely solid/opaque. you only see the foreground color.
-• \(\alpha = 0\): completely see-through/transparent. the foreground color is invisible.
-• \(\alpha = \text{anything in between}\): semi-transparent. the final color is a mixed combination of both.
+in digital graphics, alpha blending is the exact mathematical process of mixing a foreground color (the transparent paint) with a background color (whatever is behind the glass) based on an alpha value
+The alpha value represents the level of opacity:
+
+* $\alpha = 255$ (or $1.0$): Completely solid/opaque. You only see the foreground color.
+* $\alpha = 0$: Completely see-through/transparent. The foreground color is invisible.
+* $\alpha = \text{anything in between}$: Semi-transparent. The final color is a mixed combination of both.
 
 #### lets derive the blending code
 
@@ -207,26 +211,29 @@ if you are writing a graphics engine from scratch, how do you derive the math? l
 thought 1: physical concept
 
 if an alpha value represents a percentage of opacity, then the final color should be:
-\(\text{final\ color}=(\text{foreground\ color}\times \text{percentage\ of\ opacity})+(\text{background\ color}\times \text{percentage\ of\ visibility\ left})\)
+$\text{final color} = (\text{foreground color} \times \text{percentage of opacity}) + (\text{background color} \times \text{percentage of visibility left})$
 
 if opacity is 70%, then the background should show through by 30%. that means: [as the total is 100%]
-\(\text{visibility\ left}=100\%-70\%=30\%\)
+$\text{visibility left} = 100\% - 70\% = 30\%$
+
 
 thought 2: translating percentages to computer bytes
 
-computers don't naturally calculate percentages like \(70\%\); they store color channels (red, green, blue, alpha) inside 8-bit unsigned integers (uint8_t). an 8-bit byte ranges from 0 to 255.[as we already know]
-so, instead of \(100\%\), our maximum capacity is 255.
-• if foreground alpha is \(a\), then the background visibility multiplier is exactly 255 - a.
-let's write out that formula using our integer scale:
-\(\text{final}=\frac{(\text{foreground}\times a)+(\text{background}\times (255-a))}{255}\)
+computers don't naturally calculate percentages like \(70\%\); they store color channels (red, green, blue, alpha) inside 8-bit unsigned integers (uint8_t). an 8-bit byte ranges from 0 to 255.[as we already know]  
+so, instead of \(100\%\), our maximum capacity is 255.  
+• if foreground alpha is \(a\), then the background visibility multiplier is exactly 255 - a.  
+let's write out that formula using our integer scale:  
+$$\text{final} = \frac{(\text{foreground} \times a) + (\text{background} \times (255 - a))}{255}$$
+
 
 thought 3: fixing the integer division flaw
 
-in computer programming, integer division always cuts off the decimal remainder (it rounds down). if our division calculates 10.99, the computer drops the decimals and treats it as 10. over an entire image, this constant rounding down makes colors look slightly muddy and darker than they should be.
-to fix this, we need to round to the nearest whole number. the trick in computer science is to add half of the divisor to our total before dividing. since we are dividing by 255, half of that is roughly 127.
-adding 127 balances out the truncation flaw perfectly:
-\(\text{final}=\frac{(\text{foreground}\times a)+(\text{background}\times (255-a))+127}{255}\)
-this exact line of thought is how we derived the pixel-blending engine in our code.
+in computer programming, integer division always cuts off the decimal remainder (it rounds down). if our division calculates 10.99, the computer drops the decimals and treats it as 10.   over an entire image, this constant rounding down makes colors look slightly muddy and darker than they should be.  
+to fix this, we need to round to the nearest whole number. the trick in computer science is to add half of the divisor to our total before dividing. since we are dividing by 255, half of that is roughly 127.  
+adding 127 balances out the truncation flaw perfectly:  
+$$\text{final} = \frac{(\text{foreground} \times a) + (\text{background} \times (255 - a)) + 127}{255}$$
+
+and ..... just like that we have derived our blending engine  
 
 #### how alpha blending happens in our code
 
@@ -234,10 +241,11 @@ let's look at how this logic is structured inside blend_pixel.
 
 the datatypes i used
 
-• const uint8_t *p: a pointer to the raw array holding our source pixel colors. p[0] is red, p[1] is green, p[2] is blue, and p[3] is alpha.
-• uint8_t a: stores the single byte alpha value of our foreground pixel.
-• uint8_t bg_r, bg_g, bg_b: separate bytes holding the red, green, and blue values of our selected background layer.
-• uint32_t: we temporarily cast our bytes into 32-bit unsigned integers during multiplication. if we multiply two 8-bit bytes together (\(255 \times 255 = 65,025\)), the result is too large to fit back into an 8-bit byte (which caps at 255). upscaling to uint32_t prevents data overflow.
+• const uint8_t *p: a pointer to the raw array holding our source pixel colors. p[0] is red, p[1] is green, p[2] is blue, and p[3] is alpha.  
+• uint8_t a: stores the single byte alpha value of our foreground pixel.  
+• uint8_t bg_r, bg_g, bg_b: separate bytes holding the red, green, and blue values of our selected background layer.  
+• uint32_t: we temporarily cast our bytes into 32-bit unsigned integers during multiplication. if we multiply two 8-bit bytes together $255 \times 255 = 65,025$
+, the result is too large to fit back into an 8-bit byte (which caps at 255). upscaling to uint32_t prevents data overflow.  
 
 #### the flow of the code
 
@@ -245,9 +253,9 @@ inside blend_pixel, we extract the alpha value
 ``` uint8_t a = p[3];```
 1. first, we check for extreme shortcuts to save computing
 
-power. if the alpha is essentially zero (a < 32), we flag the pixel as transparent (*out_is_trans = true;) and exit. if the alpha is completely solid (a == 255), we just copy the raw pixel colors directly to the output variables and skip the blending part entirely.
-2. if the pixel is semi-transparent, we find out what background color is sitting beneath it. if the tool configuration says BG_CHECKER, we use bitwise math ```((x >> 1) ^ (y >> 1)) & 1 ``` to generate an alternating grey checkerboard pattern.
-[i will explain this later , if its is troubling you then scroll down and read the xor + checkerboard section after reading this]
+power. if the alpha is essentially zero `(a < 32)`, we flag the pixel as transparent `*out_is_trans = true;` and exit.   if the alpha is completely solid `(a == 255)`, we just copy the raw pixel colors directly to the output variables and skip the blending part entirely.  
+2. if the pixel is semi-transparent, we find out what background color is sitting beneath it. if the tool configuration says `BG_CHECKER`, we use bitwise math ```((x >> 1) ^ (y >> 1)) & 1 ``` to generate an alternating grey checkerboard pattern.  
+[i will explain this later , if its is troubling you then scroll down and read the xor + checkerboard section after reading this]  
 
 
 3. finally, we run our rounded integer division formula to blend the red, green, and blue values:
@@ -281,14 +289,14 @@ src pixel array ---helper fxns---> final printable strings
                                         [in 64kb buffer]
 ```
 
-1. color injectors: outbuf_fg_rgb and outbuf_bg_rgb  
+##### 1. color injectors: outbuf_fg_rgb and outbuf_bg_rgb  
 
-these two small helper functions act as our color pens. their single job is to construct the text-based ansi escape sequences that tell the terminal window to switch its current text colors.  
-• outbuf_fg_rgb: takes a reference to our 64kb buffer along with three color numbers (r, g, b) and builds a string matching \x1b[38;2;R;G;Bm. this modifies the color of the foreground text character itself.  
-• outbuf_bg_rgb: does the exact same thing but constructs the sequence \x1b[48;2;R;G;Bm. this modifies the color of the solid rectangular text block background.  
+these two small helper functions act as our color pens. their single job is to construct the text-based ansi escape sequences that tell the terminal window to switch its current text colors.    
+• outbuf_fg_rgb: takes a reference to our 64kb buffer along with three color numbers `(r, g, b)` and builds a string matching `\x1b[38;2;R;G;Bm`. this modifies the color of the foreground text character itself.  
+• outbuf_bg_rgb: does the exact same thing but constructs the sequence `\x1b[48;2;R;G;Bm`. this modifies the color of the solid rectangular text block background.  
 both functions use snprintf to print the formatted text sequence directly into a small temporary character string, then append that string straight onto our 64kb output storage layout.  
 
-2. the internal row loop: render_frame_halfblock  
+##### 2. the internal row loop: render_frame_halfblock  
 
 this function takes a flat, single-frame array of scaled pixels and transforms it into the final printable text strings.
 
@@ -300,9 +308,9 @@ i. it runs a outer loop moving downward through the rows. because one character 
   - to map those image pixels down into our text characters without crushing our picture, every single time the loop processes one text row r, it must grab two rows of pixels from our image data.  
 
 so in working:
-  when the loop is on text row r = 0 (the very top line of text):
-  • y_top = 0 * 2 = 0 (grabs row 0 of the image pixels)
-  • y_bot = 0 * 2 + 1 = 1 (grabs row 1 of the image pixels)
+  when the loop is on text row `r = 0` (the very top line of text):
+  • `y_top = 0 * 2 = 0` (grabs row 0 of the image pixels)
+  • `y_bot = 0 * 2 + 1 = 1` (grabs row 1 of the image pixels)
   • result: terminal row 0 prints image pixel rows 0 and 1 together inside its half-blocks.
 
   and so on...
@@ -322,32 +330,35 @@ since 0 does not equal -1, this check evaluates to true. the engine immediately 
 
 Ohhh and why it wasnt 0?
 bcuz..  if i had initialzed these state variables to 0 instead of -1, and if the first pixel of our image happened to be pure black (0, 0, 0),   
-our system would check cur_fg_r != tr (0 != 0), evaluate it as false, and falsely skip printing the color command. your terminal would end up rendering that first pixel using whatever random text color it already had left over in its active memory buffer, corrupting the image.
+our system would check `cur_fg_r != tr (0 != 0)`, evaluate it as `false`, and falsely skip printing the color command. your terminal would end up rendering that first pixel using whatever random text color it already had left over in its active memory buffer, corrupting the image.
 
 
 
 
 ii. an inner loop moves left-to-right across the horizontal columns (c).
 
-iii. for every step, it uses the flat array math (y * cols + c) * 4 to point to the exact memory locations of both the top and bottom subpixels.
+iii. for every step, it uses the flat array math `(y * cols + c) * 4 ` to point to the exact memory locations of both the top and bottom subpixels.  
    after that , 
    to extract the raw color data from memory for the exact two pixels we want to draw, and then create placeholders to store their processed colors.we do this
    
-what are tr, tg, tb, br, bg_col, and bb?
+what are `tr, tg, tb, br, bg_col, and bb`?
 
 these are variables that hold the individual red, green, and blue (rgb) color channels for our two stacked subpixels after they have been processed for transparency.
 • the t prefix stands for top pixel:
+```
   • tr = top pixel red
   • tg = top pixel green
   • tb = top pixel blue
+  ```
 • the b prefix stands for bottom pixel:
+```
   • br = bottom pixel red
   • bg_col = bottom pixel green (note: i named it bg_col instead of bg because bg was already being used for our background configuration structure!)
   • bb = bottom pixel blue
-
+```
 why do we need these variables right here?
 
-when we fetch p_top and p_bot using our pointer math, we are pointing to the raw, unprocessed pixel data straight out of the file layout. these pixels might contain transparency data (alpha channels).
+when we fetch `p_top` and `p_bot` using our pointer math, we are pointing to the raw, unprocessed pixel data straight out of the file layout. these pixels might contain transparency data (alpha channels).
 we cannot send raw transparent pixel bytes directly to the terminal screen because the terminal doesn't know how to blend them. we have to process them first.
 so, we create these clean temporary variable slots (tr, tg, tb, etc.) and pass their memory addresses into our blending engine right below that loop step:
 ```c
@@ -355,9 +366,8 @@ blend_pixel(p_top, c, y_top, bg, &tr, &tg, &tb, &top_trans);
 blend_pixel(p_bot, c, y_bot, bg, &br, &bg_col, &bb, &bot_trans);
 ```
 
-the & symbol means we are handing the keys (pointers) of these variables to blend_pixel. that function does the heavy linear interpolation math we talked about earlier, strips away the transparency, and writes the final, solid rgb values directly into those variables.
-once blend_pixel finishes its work, our column loop reads those exact variables (tr, tg, tb, etc.) to know exactly what text color sequences to write into our 64kb buffer.
-does it make sense why we pass these variables using the ampersand pointer modifier &tr, or should we look at how the next lines of code use them to check our ansi state machine?  
+the `&` symbol means we are handing the keys (pointers) of these variables to `blend_pixel`. that function does the heavy linear interpolation math we talked about earlier, strips away the transparency, and writes the final, solid rgb values directly into those variables.
+once `blend_pixel` finishes its work, our column loop reads those exact variables (tr, tg, tb, etc.) to know exactly what text color sequences to write into our 64kb buffer.
 
 
 
@@ -371,14 +381,14 @@ vi depending on whether the pixels are solid or transparent, it writes either a 
 
 vii. when an entire horizontal row is finished, it inserts a newline character (\n) and repeats until the frame is fully drawn.
 
-3. the control driver: ashi_render_halfblock
+##### 3. the control driver: ashi_render_halfblock
 
-this is the high-level manager function that dictates the lifetime of our entire rendering process.
-• it queries the terminal's system dimensions using terminal_get_size to ensure our graphic fits inside the active command-line window boundaries.
-• it runs structural scaling calculations using ashi_calc_fit_dimensions. it passes a hardcoded cell aspect ratio parameter of 2.0 because our custom half-block drawing technique doubles our vertical canvas resolution.
-• it provisions an optimization loop that resamples and prepares every single frame of an image or animated gif into memory before playing it. this guarantees a smooth playback speed with minimal cpu frame pacing hiccups.
-• if dealing with a static photo, it invokes render_frame_halfblock a single time and cleanly exits.
-• if managing an animation loop, it initializes a timing state machine. it cycles through the pre-allocated frames one after another, draws them, calculates the exact execution delay time via terminal_time_ms, sleeps the execution thread to pacing requirements, and resets the terminal cursor position upward to overwrite the old frame cleanly without causing display flickers.
+this is the high-level manager function that dictates the lifetime of our entire rendering process.  
+• it queries the terminal's system dimensions using terminal_get_size to ensure our graphic fits inside the active command-line window boundaries.  
+• it runs structural scaling calculations using ashi_calc_fit_dimensions. it passes a hardcoded cell aspect ratio parameter of 2.0 because our custom half-block drawing technique doubles our vertical canvas resolution.  
+• it provisions an optimization loop that resamples and prepares every single frame of an image or animated gif into memory before playing it. this guarantees a smooth playback speed with minimal cpu frame pacing hiccups.  
+• if dealing with a static photo, it invokes render_frame_halfblock a single time and cleanly exits.  
+• if managing an animation loop, it initializes a timing state machine. it cycles through the pre-allocated frames one after another, draws them, calculates the exact execution delay time via terminal_time_ms, sleeps the execution thread to pacing requirements, and resets the terminal cursor position upward to overwrite the old frame cleanly without causing display flickers.  
 
 #### if uh want to deep-dive :
 
@@ -391,7 +401,7 @@ and expand your understanding of color engines and digital layout parsing
 [these guys are awsssome]
 
 ### xor logic + checkerboard
-if uh had problems understanding the checkerboard logic or xor statement we did above the please read this..
+if uh had problems understanding the checkerboard logic or xor statement we did above then please read this..
 
 now listen if you look at `include/ashi.h` there's the data layout[struct] that stores the user's choice for what should appear behind a transparent img
 `ashi_bg_color_t` holds the config.
@@ -430,11 +440,13 @@ thought 2: making the squares bigger
 
 a single-pixel pattern is incredibly tiny and looks like grainy television static on a screen. we want our checkerboard squares to be larger and easier to see. let's make each square 2 pixels wide and 2 pixels tall.
 
-to do this, we need to slow down how fast our numbers change. instead of checking if x is odd or even, we want x = 0 and x = 1 to behave exactly the same way. then we want x = 2 and x = 3 to behave the same way.
+to do this, we need to slow down how fast our numbers change. instead of checking if x is odd or even, we want `x = 0` and `x = 1` to behave exactly the same way. then we want `x = 2` and `x = 3 `to behave the same way.
 in computer science, dividing an integer by 2 drops the decimal remainder. look at what happens:
+```
 • 0 / 2 = 0, 1 / 2 = 0 (both give 0)
 • 2 / 2 = 1, 3 / 2 = 1 (both give 1)
 • 4 / 2 = 2, 5 / 2 = 2 (both give 2)
+```
 by dividing x and y by 2, we group our pixels into blocks that are 2 units wide and 2 units tall!
 
 
@@ -443,9 +455,10 @@ thought 3: optimizing for high performance with bitwise shifts
 dividing numbers inside an inner loop that runs millions of times for an animation is slow for a CPU. inside computer processors, data is stored in binary bits. shifting all the bits of a binary number one slot to the right is mathematically identical to dividing that number by 2, but it executes almost instantaneously.
 the symbol for shifting bits to the right in the c language is `>>`
 so we are doing bit manipulations.
+```
 • x >> 1 means "divide x by 2".
 • y >> 1 means "divide y by 2".
-
+```
 and hence the code we wrote
 ```c
 int checker = ((x >> 1) ^ (y >> 1)) & 1;
@@ -494,28 +507,34 @@ typedef struct {
 } OutBuf;
 ```
 
-• data[65536]: a flat array of standard 1-byte characters (char). it is exactly 64 kilobytes in size (\(64 \times 1024 = 65,536\) bytes).
+• data[65536]: a flat array of standard 1-byte characters (char). it is exactly 64 kilobytes in size ($64 \times 1024 = 65,536$ bytes)  
+
 • len: a size counter (size_t) that tracks exactly how many bytes of text are currently sitting in the array at any given second.
 
 2. why do we need it here?
 as explained above
-in basic programming, you might use printf() or putchar() every time you want to output a character or a color change. in a high-performance graphics viewer, doing this is fatal.
-every time your program communicates with the terminal window, the operating system has to perform a system call (syscall). syscalls are incredibly expensive operations for the cpu. if our terminal grid is \(160 \times 80\), that is 12,800 cells. if we perform multiple print commands per cell, 60 times a second for an animation, we throw thousands of tiny syscalls at the system. this results in severe screen tearing, dropping frames, and massive cpu spikes.  
+in basic programming, you might use printf() or putchar() every time you want to output a character or a color change. in a high-performance graphics viewer, doing this is fatal.  
+every time your program communicates with the terminal window, the operating system has to perform a system call (syscall).   syscalls are incredibly expensive operations for the cpu.   
+if our terminal grid is $160 \times 80$  
+ that is 12,800 cells. if we perform multiple print commands per cell, 60 times a second for an animation, we throw thousands of tiny syscalls at the system. this results in severe screen tearing, dropping frames, and massive cpu spikes.  
 the 64kb buffer acts like a staging warehouse. instead of sending out thousands of tiny data packets, we bundle everything up into one massive shipping container in memory. only when that container is full (or the entire frame is done rendering) do we make one single syscall using fwrite(). this bypasses the standard c formatting overhead and flushes everything directly to the terminal parser at maximum speed.
 
 3. what exactly does it hold?
 
-it is crucial to understand that this buffer does not store raw pixel data (rgba values). by the time data enters OutBuf, all the mathematical pixel calculations, alpha blending, and color state tracking are already finished.
-this buffer holds raw, text-based terminal commands and symbols encoded as bytes. specifically:
-• ansi truecolor strings: raw ascii text sequences like \x1b[38;2;255;120;0m (foreground color) and \x1b[48;2;32;32;32m (background color).
-• unicode half-block graphics: the raw three-byte strings \xe2\x96\x80 (▀) and \xe2\x96\x84 (▄) which represent the physical subpixels.
-• structural console characters: plain text spaces (' ') for completely transparent segments, reset codes (\x1b[0m), and newlines (\n) at the end of each graphic row.
+it is crucial to understand that this buffer does not store raw pixel data (rgba values). by the time data enters OutBuf, all the mathematical pixel calculations, alpha blending, and color state tracking are already finished.  
+this buffer holds raw, text-based terminal commands and symbols encoded as bytes. specifically:  
+• ansi truecolor strings: raw ascii text sequences like
+```
+ \x1b[38;2;255;120;0m (foreground color) and \x1b[48;2;32;32;32m (background color).  
+```  
+• unicode half-block graphics: the raw three-byte strings `\xe2\x96\x80 (▀)` and `\xe2\x96\x84 (▄)` which represent the physical subpixels.  
+• structural console characters: plain text spaces (' ') for completely transparent segments, reset codes `(\x1b[0m)`, and newlines `(\n)` at the end of each graphic row.
 
-4. how it works in the rendering loop
+4. how it works in the rendering loop  
 
-in the execution flow, three inline helper functions manage this buffer:
-1. outbuf_append: drops text strings into data at the current len index. before copying, it checks if adding the new text will overflow the 65,536-byte limit.
-2. outbuf_flush: if the buffer is about to overflow (or the frame is finished), this function triggers fwrite(b->data, 1, b->len, stdout). this dumps the entire memory segment to the console and resets len back to 0.
+in the execution flow, three inline helper functions manage this buffer:  
+1. outbuf_append: drops text strings into data at the current len index. before copying, it checks if adding the new text will overflow the 65,536-byte limit.  
+2. outbuf_flush: if the buffer is about to overflow (or the frame is finished), this function triggers fwrite(b->data, 1, b->len, stdout). this dumps the entire memory segment to the console and resets len back to 0.  
 
 ---
 
