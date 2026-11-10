@@ -370,6 +370,49 @@ blend_pixel(p_bot, c, y_bot, bg, &br, &bg_col, &bb, &bot_trans);
 the `&` symbol means we are handing the keys (pointers) of these variables to `blend_pixel`. that function does the heavy linear interpolation math we talked about earlier, strips away the transparency, and writes the final, solid rgb values directly into those variables.
 once `blend_pixel` finishes its work, our column loop reads those exact variables (tr, tg, tb, etc.) to know exactly what text color sequences to write into our 64kb buffer.
 
+##### logical problem in emit coloring a char cell when either top is transparent
+
+so in the code you may have encountered this problem that ;  
+if top[foreground] is transparent then why are we calling the foreground coloring function? it should emit coloring fg and else color the background. 
+why are we creating a lower half block unicode char and coloring it though fg coloring function?
+your intuition is 100% correct in theory but theres a logical
+issue while doing that.  
+a terminal limitation  we should call it  
+
+
+###### your approach (using standard background color)
+
+if the top pixel is transparent and the bottom pixel has color, your logic says we should do this:  
+1. set the background color to our bottom pixel color.
+2. leave the foreground color alone (or clear it).
+3. print our standard upper half-block ▀.
+let's see what happens physically inside the text cell if we do that:  
+• the top half of the cell is drawn by the ▀ glyph. it takes whatever foreground color is active. since the top pixel is supposed to be transparent, this top half will display a solid color instead of being see-through!
+• the bottom half of the cell is empty space, so it shows the background color we just set.
+by using the upper half-block ▀ here, we accidentally paint a solid color over the top half, which completely breaks our transparency!
+
+
+###### what if we just print a blank space ' '?
+
+okay, let's try another idea. what if we don't print a half-block character at all? what if we just print a regular blank space ' ' and set the background color?  
+• a regular space character ' ' is completely empty from top to bottom.  
+• if we set the background color to our bottom pixel, the entire character box turns into a solid colored rectangle.  
+• now both the top half and the bottom half are colored. our transparency on the top half is gone again!  
+
+###### terminal limitation that forced my hand
+
+here is the problem: a text terminal does not let you split a cell's background color in half. a background color sequence `\x1b[48m` always fills the entire 100% of the character cell box. there is no such thing as a "top-half background" or "bottom-half background".
+because of this limitation, if we want a cell to be half-transparent and half-colored, we cannot use the   background color tool to paint that pixel. we are forced to leave the background completely empty and default using `\x1b[49m` so the terminal screen shows through.  
+since the background is locked out and being used for   transparency, our only option left to draw the colored pixel   is to use the foreground text glyph itself.  
+that is why we pull out a different tool from our unicode toolkit: the lower half-block ▄.  
+1. we keep the background completely empty and transparent `\x1b[49m`.
+2. we use the lower half-block ▄ so the physical shape sits perfectly on the bottom half.  
+3. since the shape is a text glyph, we use the foreground color tool (outbuf_fg_rgb) to paint it.  
+by switching the character to ▄, we successfully trick the terminal into rendering a cell where the top half is completely see-through and the bottom half is a perfectly colored image pixel.
+
+
+
+
 
 
 

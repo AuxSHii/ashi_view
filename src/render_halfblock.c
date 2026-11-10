@@ -26,12 +26,12 @@ static inline void outbuf_flush(OutBuf *b){
 
 //fxn to append buffer
 static inline void outbuf_append(OutBuf *b , const char *str , size_t n){
-    //char data ->str = source = color , unicde blokc code etc
+    //char data ->str = source => color cmd ---append_in--> 64kb buffer OutBuf , 
     
     if(b->len + n >= sizeof(b->data)){
         outbuf_flush(b);
     }
-    memcpy(b->data + b-> len , str , n); 
+    memcpy(b->data + b->len , str , n); 
     b->len += n; //update length of buffer
 }
 //str appender 
@@ -47,7 +47,7 @@ static inline void outbuf_fg_rgb(OutBuf *b  uint8_t r, uint8_t g , uint8_t b_col
         outbuf_append(b, tmp, (size_t)n);
 }
 
-static inline void output_fb_rgb(OutBuf *b uint8_t r, uint8_t g , uint8_t b_col){
+static inline void output_bg_rgb(OutBuf *b uint8_t r, uint8_t g , uint8_t b_col){
     char tmp[32];
         int n = snprintf(tmp, sizeof(tmp), "\x1b[48;2;%u;%u;%um", (unsigned)r, (unsigned)g, (unsigned)b_col);
         outbuf_append(b, tmp, (size_t)n);
@@ -129,11 +129,83 @@ static void render_frame_halfblock(const uint8_t *pixels, int cols , int rows ,
         if(top_trans && bot_trans){
             if(!cur_bg_default || !cur_fg_default){
                 outbuf_append_str(buf, "\x1b[0m");
+                cur_fg_r = cur_fg_g = cur_fg_b = -1; //state var still -1 if img-transparent
+                cur_bg_r = cur_bg_g = cur_bg_b = -1;
+                cur_fg_default = true;
+                cur_bg_default = true;
             }
+
+            outbuf_append(buf, " ", 1);
+        }
+        //case ; IF top is transparent
+        else if(top_trans){
+            //only bottom is colored; emit lower half block
+            if(cur_fg_r != bg_r || cur_fg_g != bg_col || cur_fg_g != bg_b || cur_fg_default){
+                outbuf_fg_rgb(buf, bg_r, bg_col, bg_b);
+                //update state [current] fg color var
+                cur_fg_r = bg_r; cur_fg_g = bg_col; cur_fg_b = bg_b;
+                cur_fg_default = false;
+            }
+            if(!cur_bg_default){
+                //terminal should reset to default color
+                outbuf_append_str(buf, "\x1b[49m");
+                
+                cur_bg_r = cur_bg_g = cur_bg_b = -1;
+                cur_bg_default = true;
+            }
+                                  //any other case
+            outbuf_append_str(buf, "\xe2\x96\x84"); //printlower block char  ▄
         }
 
+        //case: if bottom is transparent
+        else if(bot_trans){
+            if(cur_fg_r != tr || cur_fg_g != tg || cur_fg_b != tb || cur_fg_default){
+                outbuf_fg_rgb(buf, tr, tg, tb);
+                //update state variables
+                cur_fg_r = tr; cur_fg_g = tg; cur_fg_b = tb;
+                cur_fg_default = false;
+            }
+            //if current state bg colors have some vals 
+            if(!cur_bg_default){
+                //reset termnl color
+                outbuf_append_str(buf, "\x1b[49m");
+                //reset state vars
+                cur_bg_r = cur_bg_g = cur_bg_b = -1;
+                cur_bg_default = true;
+            }
+
+            outbuf_append_str(buf, "\xe2\x96\x80"); //print upper-half-block  ▀ 
+            }
+
+            else {
+                //nothing is transparent
+                //1. color fg = top = upper-half-block
+                if(cur_fg_r != tr || cur_fg_g != tg || cur_fg_b != tg || cur_fg_default){
+                    //color fg
+                    outbuf_fg_rgb(buf, tr, tg, tb);
+                    //update state fg vars
+                    cur_fg_r = tr; cur_fg_g = tg; cur_fg_b = tb;
+                    cur_fg_default = false;
+                }
+
+                //2. color bg = no unicode char here = terminal char cell
+                if(cur_bg_r != br || cur_bg_g != bg_col || cur_bg_b = bb || cur_bg_default)
+                    //color bg
+                        outbuf_bg_rgb(buf, br,bg_col, bb);
+                    //update state bg vars & bg bool
+                        cur_bg_r = br; cur_bg_g = bg_col; cur_fg_b = bb;
+                        cur_bg_default = false;
+            }
         }
+            //print 1 unicode upper half block ▀ for that 1 iteration of character cell
+                 outbuf_append_str(buf, "\xe2\x96\x80");       
     }
+
+        //completed for every char cell[row and cols]
+        //flush teh buffer out
+        outbuf_flush(buf);
+
+//end of fxn    
 }
 
 
