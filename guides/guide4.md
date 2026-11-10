@@ -180,7 +180,8 @@ When a pixel has an alpha value $A < 255$:
 * **Checkerboard Mode (`--bg checker`):**
   A 2×2 subpixel checkerboard pattern alternates between two dark neutral grays (`#242424` and `#383838`).
   Spatial pattern formula:
-$$\text{checker} = \left(\left\lfloor \frac{x}{2} \right\rfloor \oplus \left\lfloor \frac{y}{2} \right\rfloor\right) \ \& \ 1$$
+$$\text{checker} = \left(\left\lfloor \frac{x}{2} \right\rfloor \oplus \left\lfloor \frac{y}{2} \right\rfloor\right) \text{ AND } 1$$
+
 
   Alpha blending formula:
   $$C_{\text{out}} = \frac{C_{\text{src}} \times A + C_{\text{bg}} \times (255 - A) + 127}{255}$$
