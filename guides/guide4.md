@@ -698,6 +698,7 @@ In `ashi_render_halfblock(img, cfg)`:
 * Compute fit dimensions using `ashi_calc_fit_dimensions(img->width, img->height, max_cols, max_rows, 2.0, &cols, &rows)`.
 * Allocate scaled frame buffer of size `cols * (rows * 2) * 4`.
 * Downsample using `ashi_resample_rgba()`.
+
 #### 3.2
 Implement the rasterizer scanning loop:
 ```

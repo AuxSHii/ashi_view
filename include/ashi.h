@@ -9,6 +9,25 @@
 
 #define ASHI_VIEW_VERSION "1.0.0"
 
+//back-ground rendering modes for transparent pngs
+
+typedef enum {
+    BG_CHECKER = 0,
+    BG_SOLID,
+    BG_NONE
+} ashi_bg_mode_t;
+
+
+///background rgb color construct used for alpha blending and checkerboard rendering
+typedef struct {
+    ashi_bg_mode_t mode;
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} ashi_bg_color_t;
+
+
+
 //single decoded img frame (RGBA 8 bit)
 
 typedef struct {
@@ -17,6 +36,7 @@ typedef struct {
     uint8_t *pixels; //point to raw32bit rgba bytes
     int delay_ms;  //frame duration
 } ashi_frame_t;
+
 
 //image container: one or more anim frame holder
 
@@ -33,7 +53,20 @@ typedef struct {
 } ashi_image_t;
 
 
-//cmd line exec config[declare later]
+//cmd line exec config
+
+typedef struct 
+{
+    const char *file_path;
+    ashi_protocol_t protocol; //which terminal protocol
+    int target_cols;
+    int target_rows;
+    ashi_bg_color_t bg; //bg color rgba struct
+    int loop_count;  //will use them later
+    float speed;
+    bool clear_screen;
+    bool show_info;
+} ashi_config_t;
 
 
 

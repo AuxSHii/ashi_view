@@ -208,6 +208,84 @@ static void render_frame_halfblock(const uint8_t *pixels, int cols , int rows ,
 //end of fxn    
 }
 
+//rendering lifetime manager fxn 
+//takes img + config and renders img into termninal through unicde mechanism wrote above
+
+int ashi_render_halfblock(const ashi_image_t *img, const ashi_config_t *cfg){
+    //invalid input case
+    if(!img || img->frame_count <= 0){
+        return -1;
+    }
+
+    int term_cols = 80, term_rows = 24; //dreclared and intlzd rows and cols var
+    //query terminl size
+    terminal_get_size(&term_cols , &term_rows); 
+   //update max_cols and rows 
+    int max_cols = cfg->target_cols > 0 ? cfg->target_cols : term_cols;
+    int max_rows = cfg->target_rows > 0 ? cfg->target_rows : (term_rows > 2 ? term_rows - 2 : term_rows);
+
+    // intilzd var r,c for fitting dimension output 
+    int rows =0, cols = 0;
+   //aspect ratio = 2.0; as each 1 cell contains <= 2 vertical subpixels
+   ashi_calc_fit_dimensions(img->width, img->height,max_cols, max_rows , 2.0, &cols , &rows ) 
+   
+   int subpixels_h = rows * 2;
+
+   //allocate frame buffer of corrsponding size
+   size_t frame_bytes = (size_t)cols * (size_t)subpixel_h * 4;
+
+    // pre-resample all frames for zero-overhead animation playback 
+    uint8_t **scaled_frames = malloc((size_t)img->frame_count * sizeof(uint8_t *));
+    if (!scaled_frames) {
+        return -1;
+    }
+
+    for (int f = 0; f < img->frame_count; ++f) {
+        scaled_frames[f] = malloc(frame_bytes);
+        if (!scaled_frames[f]) {
+            for (int j = 0; j < f; ++j) free(scaled_frames[j]);
+            free(scaled_frames);
+            return -1;
+        }
+        ashi_resample_rgba(img->frames[f].pixels, img->width, img->height,
+                           scaled_frames[f], cols, subpixel_h);
+    }
+    
+   OutBuf buf = { .len = 0 }; //initialized buffer with length of 0
+   
+   if(cfg->clear_screen){
+    terminal_clear_screen();
+   } 
+
+   terminal_hide_cursor();
+   
+   //if static img -> render once and exit
+   if(!img->is_animated || img->frame_count == 1){
+       //render img
+        render_frame_halfblock(scaled_frames[0], cols ,rows, &cfg->bg , &buf);
+        terminal_show_cursor();
+        terminal_reset_color(); 
+        fflush(stdout);
+
+        free(scaled_frames[0]);
+        free(scaled_frames);
+        return 0;
+   }
+
+
+   //animation playback loop[will define later]
+
+
+
+
+
+//end of fxn
+}
+
+
+
+
+
 
 
 
