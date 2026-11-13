@@ -6,6 +6,14 @@ in this part of our guide, you will transform your image viewer from a static di
 
 You will add multi-frame GIF decoding via `stbi_load_gif_from_memory`, implement high-precision monotonic frame timing, introduce a **pre-resampling frame cache** for zero-latency frame swaps, and achieve **flicker-free in-place animation** using terminal cursor repositioning (`\x1b[<rows>A\r`). You will also add non-blocking keyboard controls so users can exit animations by pressing `q` or `ESC`.
 
+we have image as binary[raw] and in our struct
+if you are confused how they look like in memory , see this
+<img width="1756" height="2736" alt="0 1_pixel_in_mem" src="https://github.com/user-attachments/assets/a9938e86-c614-456c-85dd-c1302cb7ebc8" />
+
+before we implement anything the next thing i want you to brush up is our image decoding pipeline
+this is how final image pipeline will look:
+<img width="2057" height="7128" alt="0 decoding_pipeliene" src="https://github.com/user-attachments/assets/d44820cf-f53d-4294-b0f8-3850fa1d26b7" />
+
 ---
 
 ## 2. what you should understand before coding
@@ -35,6 +43,9 @@ if an animated GIF has 60 frames and is originally 800×600 pixels:
 * **Pre-resampling strategy:** Allocate an array of $N$ downsampled frame buffers *before* the playback loop begins:
 $$\text{scaled frames}[f] = \text{resample}(\text{source frame}[f], \text{cols}, \text{rows} \times 2)$$
 
+<img width="1284" height="2240" alt="2 pre-sampling_cache" src="https://github.com/user-attachments/assets/6cced7c2-f8ac-40e2-9b66-0861bee825d1" />
+
+
 
 during playback, swapping frames is a simple memory pointer change taking $< 0.1\text{ ms}$.
 
@@ -51,6 +62,10 @@ the naive way to animate in a terminal is:
   * `\x1b[<N>A`: Move cursor UP by $N$ rows.
   * `\r`: Carriage return (move cursor to column 0).
   the terminal redraws the new pixels directly over the old pixels in-place with zero flicker.
+
+<img width="1222" height="213" alt="3 flicker_free_cursor" src="https://github.com/user-attachments/assets/ec713d3b-1176-47db-b411-3ab5d94cc6d6" />
+
+
 
 so we are essentialy re-writing the next frame over the last frame , we are not gonna clear the screen that takes time..
 
@@ -118,7 +133,12 @@ an `unsigned char` is guaranteed to be an `8-bit integer` holding values from `0
 
 ##### how pixels sit in memory (rgba)
 
+<img width="1698" height="1387" alt="img data viiusal-phase 5" src="https://github.com/user-attachments/assets/a087fa17-6a66-4aa6-a7b9-1c5659552270" />
+
 when we pass 4 as the last argument (desired_channels = 4) to stbi_load_from_memory or stbi_load_gif_from_memory, we are telling stb_image: "no matter whether the original image was grayscale, rgb, or palette-indexed, convert every single pixel into 4 bytes: red, green, blue, and alpha."  
+
+<img width="3578" height="1233" alt="img data actual storage" src="https://github.com/user-attachments/assets/545afb98-55aa-4d99-a860-6c91a232eff6" />
+
 so a single pixel takes 4 bytes:  
 • byte 0: red (0 to 255)  
 • byte 1: green (0 to 255)  
@@ -142,6 +162,10 @@ gif_pixels + 0               gif_pixels + 1*frame_bytes   gif_pixels + 2*frame_b
 ```
 
 ##### pointer arithmetic in our slicing loop
+
+this is how our slicing work:
+<img width="6258" height="3852" alt="1 simpler_slicing+more" src="https://github.com/user-attachments/assets/578dde7f-5ea2-442c-9a73-fe3966ea702c" />
+
 
 inside `src/image.c`, we want each `img->frames[i]` to own its own independent pixel buffer so every frame looks identical in structure to a static image. look at how we slice that giant block:
 ```c
@@ -232,7 +256,7 @@ keeping the original compressed source buffer attached to a decoded asset struct
 
 ---
 
-## for TASk 2
+## for TASK 2
 
 so we have till now , successfully decoded the image or gif we will now be making the terminal to playback gif etc in real time..
 
@@ -244,7 +268,8 @@ if you render an image once, you just print characters and exit. when you animat
 3. how do we listen for the user pressing q or ESC without freezing the animation while waiting for the enter key?
 
 we implement the solutions in `terminal.c`
-[insert diagram 1: full terminal.c platform & lifecycle pipeline here]
+<img width="2525" height="9273" alt="entire terminal flow" src="https://github.com/user-attachments/assets/0131ffaa-b82a-42bc-a604-41f8dda75d57" />
+
 
 ### 1. monotonic clocks(terminal_time_ms) -
 our system's clock cant be trusted in a regular fashion.  
@@ -260,6 +285,10 @@ think of this as a hardware stopwatch that starts ticking upward from 0 the exac
 it has no idea what year or time of day it is.  
 its only guarantee is that every tick moves forward at a rock-solid, constant physical rate and never jumps backward or forward.  
 
+<img width="2216" height="1236" alt="5 wall_clock_vs_monotonic_clock" src="https://github.com/user-attachments/assets/0c0c1db7-5d65-49e1-93d3-383d0b672bdd" />
+
+
+
 #### why we need it in gif player?
 
 suppose frame 0 starts at t_start = 1000ms on a wall clock.  halfway through rendering that frame, windows or linux syncs with an internet time server and nudges your clock backward by 50ms.  
@@ -267,7 +296,8 @@ suppose frame 0 starts at t_start = 1000ms on a wall clock.  halfway through ren
 • we compute elapsed = t_now - t_start = 960 - 1000 = -40ms.
 • because uint64_t is an unsigned integer, -40 underflows into 18,446,744,073,709,551,576 milliseconds (roughly 584 million years!). your gif freezes forever.  
 
-[insert diagram 2: wall clock ntp jump vs. monotonic stopwatch here]
+<img width="1640" height="479" alt="4  monotonic_frame_pacing" src="https://github.com/user-attachments/assets/7eee2579-28bb-45e0-bc1b-654bfc657ef9" />
+
 
 
 ### how we read it?
@@ -326,7 +356,7 @@ the problem with getchar() and scanf() is:  when we call them
 program stops dead in its tracks and waits until the user types a character and hits enter. if we called getchar() inside our gif loop, frame 0 would draw, and the animation would freeze completely until you pressed a key!
 
 we need a non-blocking way to input keys: "has the user pressed a key right this microsecond? if yes, grab it; if no, return false immediately in 0ms so we can draw the next frame."  
-[insert diagram 3: blocking getchar() vs. non-blocking poll()/ _kbhit() here]
+
 
 ### implementation 
 
@@ -358,23 +388,6 @@ if POLLIN (data ready to read) is set, we read 1 raw byte via read().
   • registers sig_handler for SIGINT (ctrl+c) and SIGTERM. if the user hits ctrl+c mid-animation while the cursor is hidden (\x1b[?25l), sig_handler runs terminal_restore() so your terminal cursor isn't left invisible forever!  
 2. terminal_cursor_up(int rows):
   • prints \x1b[<rows>A\r. \x1b[<rows>A moves the cursor straight up rows lines, and \r (carriage return) snaps it all the way back to column 0 (top-left corner of our image) so the next frame paints directly over the previous one with zero screen clearing.  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ---
