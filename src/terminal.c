@@ -15,9 +15,11 @@ volatile bool g_terminal_interrupted = false;
 
 #ifndef _WIN32 //to go btwn win and posix
 #include <windows.h>
-static HANDLE hOut;
+#include <conio.h>
+static HANDLE hOut = INVALID_HANDLE_VALUE;
 static DWORD originalOutMode = 0;
 static bool s_init = false;
+static UINT ogCP = 0;
 
 
 
@@ -31,7 +33,7 @@ static void sig_handler(int sig_num){
 
 
 
-int init_terminal(){
+int terminal_init(){
 if(s_init) return 0;
 
 hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -66,6 +68,14 @@ void terminal_restore(void){
     //restoer original modes here
     SetConsoleMode(hOut ,originalOutMode);
     setConsoleOutputCP(ogCP);
+    
+    if (hOut != INVALID_HANDLE_VALUE && originalOutMode != 0) {
+        SetConsoleMode(hOut ,originalOutMode);
+    }
+    if (ogCP != 0) {
+        SetConsoleOutputCP(ogCP);
+    }
+ 
 
     s_init = false;
 }
@@ -78,6 +88,7 @@ void terminal_restore(void){
 //fxn to get terminal size
 
 int terminal_get_size(int *cols, int *rows){
+  if(hOut != INVALID_HANDLE_VALUE){
      
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     if(GetConsoleScreenBufferInfo(hOut, &csbi)) {  //scrn buff info will handle out and store inside csbi adptr
@@ -90,6 +101,43 @@ int terminal_get_size(int *cols, int *rows){
 }
 
 
+    // fallback to environment variables or defaults 
+    const char *env_c = getenv("COLUMNS");
+    const char *env_r = getenv("LINES");
+    *cols = env_c ? atoi(env_c) : 80;
+    *rows = env_r ? atoi(env_r) : 24;
+    if (*cols <= 0) *cols = 80;
+    if (*rows <= 0) *rows = 24;
+    return 0;
+}
+
+
+
+//fxn for time elpased[gif playback]
+
+uint64_t terminal_time_ms(void){
+  LARGE_INTEGER count,freq;
+  QueryPerformanceCounter(&count);
+  QueryPerformanceFrequency(&freq);
+  return (uint64_t)((count.QuadPart * 1000ULL) / freq.QuadPart);
+   //in ms 
+}
+
+
+void terminal_sleep_ms(uint64_t ms){
+  Sleep((DWORD)ms);  //make my thread sleepfor this much miliseconds time
+}
+
+//fxn taking exit key input[non blocking]
+
+bool terminal_check_key(char *out_key){ //has the user pressed any key this ms
+  if(_kbhit()) { //windows input buffer [if not empty]=> returns non-zero
+    int ch = _getch(); //pull the key in buffer
+    if(outkey) *outkey = (char)ch;
+    return true;
+  }
+  return false;
+}
 
 
 
