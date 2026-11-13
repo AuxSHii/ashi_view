@@ -33,7 +33,8 @@ if an animated GIF has 60 frames and is originally 800×600 pixels:
 * downsampling a single frame takes ~1–2 milliseconds.
 * if you downsample inside the playback loop, you consume CPU and introduce frame stutter.
 * **Pre-resampling strategy:** Allocate an array of $N$ downsampled frame buffers *before* the playback loop begins:
-$$\text{scaled\_frames}[f] = \text{resample}(\text{source\_frame}[f], \text{cols}, \text{rows} \times 2)$$
+$$\text{scaled frames}[f] = \text{resample}(\text{source frame}[f], \text{cols}, \text{rows} \times 2)$$
+
 
 during playback, swapping frames is a simple memory pointer change taking $< 0.1\text{ ms}$.
 
