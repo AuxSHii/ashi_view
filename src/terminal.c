@@ -146,8 +146,12 @@ bool terminal_check_key(char *out_key){ //has the user pressed any key this ms
 
 #include <unistd>
 #include <sys/ioctl.h>
+#include <termios.h>
+#include <time.h>
+#include <poll.h>
 
-
+static struct termios og_termios;
+static bool has_og_termios = false;
 static bool s_init = false;
 
 static void sig_handler(int sig_num){
@@ -159,10 +163,21 @@ static void sig_handler(int sig_num){
 
 
 
-int init_terminal(){
+int terminal_init(){
   if (s_init) return 0;  
-  struct sigaction sa;
+  
 
+  if(isatty(STDIN_FILENO)){
+    if(tcgetattr(STDIN_FILENO, &og_termios) == 0){
+      has_og_termios = true;
+    }
+  }
+
+
+  struct sigaction sa;
+  sa.sa_handler = sig_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
   sigaction(SIGINT, &sa, NULL);
   sigaction(SIGTERM, &sa, NULL);
 
@@ -171,6 +186,23 @@ int init_terminal(){
 
 
 }
+
+
+//fxn to restorer terminal
+
+void terminal_restore(void){
+  if(s_init) return;
+
+  terminal_show_cursor();
+  terminal_reset_color();
+  fflush(stdout);
+
+  if(has_og_termios){
+    tcsetattr(STDIN_FILENO, TCSANOW, &og_termios);
+  }
+  s_init = false;
+}
+
 
 //fxn for gettin size
 int terminal_get_size(int *cols, int *rows){
@@ -194,8 +226,30 @@ int terminal_get_size(int *cols, int *rows){
  if(*cols <= 0) *cols = 80;  //if invalid then fallback to def value we defined
  if(*rows <= 0) *rows = 24;
  return 0;
+}
 
- 
+//fxn for get time in ms
+
+uint64_t terminal_time_ms(void){
+  struct timespec ts; //posix time struct
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)(ts.tv_nsec / 1000000ULL);
+ //return in ms
+}
+
+//fxn: make my thread sleep for this  amt of ms
+void terminal_sleep_ms(uint64_t ms){
+  struct pollfd pfd = { .fd = STDIN_FILENO, .events = POLLIN, .revents = 0 }; //posix poll fxn struct defineed declared
+  if (poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN)) {
+        char ch;
+        if (read(STDIN_FILENO, &ch, 1) == 1) {
+            if (out_key) *out_key = ch;
+            return true;
+        }
+    }
+    return false;
+}
+
 }
 
 
@@ -203,6 +257,11 @@ int terminal_get_size(int *cols, int *rows){
 
 
 #endif //win 32
+
+void terminal_hide_cursor(void)
+{
+    fputs("\x1b[?25l", stdout);
+}
 
 void terminal_show_cursor(void){
     fputs("\x1b[251", stdout);
@@ -212,5 +271,20 @@ void terminal_reset_color(void){
     fputs("\x1b[0m", stdout);
 }
 
+void terminal_clear_screen(void)
+{
+    fputs("\x1b[2J\x1b[H", stdout);
+}
 
+void terminal_cursor_home(void)
+{
+    fputs("\x1b[H", stdout);
+}
+
+void terminal_cursor_up(int rows)
+{
+    if (rows > 0) {
+        fprintf(stdout, "\x1b[%dA\r", rows);
+    }
+}
 
