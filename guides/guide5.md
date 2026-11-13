@@ -283,6 +283,96 @@ return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)(ts.tv_nsec / 1000000ULL);
 so we will know in ms , how much time has passed ..
 
 #### on windows
+```c
+LARGE_INTEGER count, freq;
+QueryPerformanceCounter(&count);
+QueryPerformanceFrequency(&freq);
+return (uint64_t)((count.QuadPart * 1000ULL) / freq.QuadPart);
+
+```
+1. windows exposes the cpu's high-resolution hardware timer via QueryPerformanceCounter, which returns raw hardware ticks (count.QuadPart).  
+2. because different motherboards tick at different speeds (e.g., 10 mhz vs 3.5 ghz), we ask QueryPerformanceFrequency how many ticks occur per second (freq.QuadPart), multiply ticks by 1000ULL first (to preserve precision before integer division!), and divide by freq.  
+
+ALSO in context of INDUSTRIAL applications  
+every game engine (unreal, unity, godot), browser (performance.now() in javascript), and video player (mpv, vlc) uses CLOCK_MONOTONIC on unix and QueryPerformanceCounter on windows for frame pacing and delta-time physics.  
+
+
+## 2. sleeping without spiking the cpu
+a beginner often writes a delay like this:
+```c
+// ❌ terrible idea: "busy-waiting"
+while (terminal_time_ms() - start < 100) { }
+
+```
+
+that empty while loop forces your cpu core to run at 100% utilization, heating up your laptop and draining battery just to wait 100 milliseconds.  
+instead, we call nanosleep() on posix and Sleep() on windows. these are kernel system calls: our program tells the operating system scheduler, "put my thread to sleep and give my cpu core to other apps; wake me up in ms milliseconds." while sleeping, our program uses 0% cpu.  
+
+#### POSIX
+```c
+ts.tv_sec = ms / 1000;
+ts.tv_nsec = (long)(ms % 1000) * 1000000L;
+nanosleep(&ts, NULL);
+
+```
+nanosleep requires tv_nsec to be strictly less than 1,000,000,000 (1 second).  
+if someone passes ms = 1500 (1.5 seconds), 1500 / 1000 puts 1 into tv_sec, and the modulo (1500 % 1000) * 1000000L puts the remaining 500,000,000 nanoseconds into tv_nsec.
+
+## 3.non-blocking keyboard input [exit keys]
+
+the problem with getchar() and scanf() is:  when we call them  
+program stops dead in its tracks and waits until the user types a character and hits enter. if we called getchar() inside our gif loop, frame 0 would draw, and the animation would freeze completely until you pressed a key!
+
+we need a non-blocking way to input keys: "has the user pressed a key right this microsecond? if yes, grab it; if no, return false immediately in 0ms so we can draw the next frame."  
+[insert diagram 3: blocking getchar() vs. non-blocking poll()/ _kbhit() here]
+
+### implementation 
+
+#### on windows(_kbbhit + _getch):
+
+
+_kbhit() checks the windows console input buffer without waiting.   
+if a keystroke is sitting in the queue, it returns non-zero, and _getch() pulls that single character immediately without waiting for enter and without echoing the letter q onto your artwork.
+
+#### on posix (poll with timeout = 0):
+
+```c
+struct pollfd pfd = { .fd = STDIN_FILENO, .events = POLLIN, .revents = 0 };
+if (poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN)) {
+    char ch;
+    if (read(STDIN_FILENO, &ch, 1) == 1) { ... }
+}
+```
+poll() asks the linux/macos kernel to inspect file descriptor 0 (STDIN_FILENO). the third argument 0 is the timeout in milliseconds—passing 0 tells the kernel "do not wait at all; check right now and return immediately."  
+if POLLIN (data ready to read) is set, we read 1 raw byte via read().
+
+(note for phase 5/6 polish: on posix terminals in default "canonical" line-buffered mode, the terminal driver holds keypresses until enter is pressed unless ICANON and ECHO are disabled via tcsetattr in terminal_init—something to keep in mind if q requires enter on linux/mac!)
+
+## 4. terminal life cycle , signals & ansi cursor control
+
+1. terminal_init():
+  • on windows, turns on ENABLE_VIRTUAL_TERMINAL_PROCESSING (so cmd.exe understands \x1b[... ansi color and cursor codes) and CP_UTF8 (so half-block unicode characters ▀ render instead of garbled symbols).  
+  • on posix, saves your original terminal settings (tcgetattr) so we can restore them cleanly later.  
+  • registers sig_handler for SIGINT (ctrl+c) and SIGTERM. if the user hits ctrl+c mid-animation while the cursor is hidden (\x1b[?25l), sig_handler runs terminal_restore() so your terminal cursor isn't left invisible forever!  
+2. terminal_cursor_up(int rows):
+  • prints \x1b[<rows>A\r. \x1b[<rows>A moves the cursor straight up rows lines, and \r (carriage return) snaps it all the way back to column 0 (top-left corner of our image) so the next frame paints directly over the previous one with zero screen clearing.  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ---
