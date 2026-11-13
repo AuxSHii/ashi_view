@@ -237,8 +237,19 @@ uint64_t terminal_time_ms(void){
  //return in ms
 }
 
-//fxn: make my thread sleep for this  amt of ms
-void terminal_sleep_ms(uint64_t ms){
+//fxn to make my thread sleep for ms
+void terminal_sleep_ms(uint32_t ms)
+{
+    struct timespec ts;
+    ts.tv_sec = ms / 1000;
+    ts.tv_nsec = (long)(ms % 1000) * 1000000L;
+    nanosleep(&ts, NULL);
+}
+
+
+
+//fxn: to get non blocking exit key for our programme
+void terminal_check_key(char *out_key){
   struct pollfd pfd = { .fd = STDIN_FILENO, .events = POLLIN, .revents = 0 }; //posix poll fxn struct defineed declared
   if (poll(&pfd, 1, 0) > 0 && (pfd.revents & POLLIN)) {
         char ch;
@@ -250,7 +261,7 @@ void terminal_sleep_ms(uint64_t ms){
     return false;
 }
 
-}
+
 
 
 
