@@ -15,6 +15,6 @@ adds a trailing null terminator at the end
 */
 
 size_t base64_encode(const uint8_t *src, size_t src_len , char *dst, size_t dst_cap);
-
+ 
 
 #endif
