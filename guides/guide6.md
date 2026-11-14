@@ -66,7 +66,9 @@ the catch?
 terminal emulators are built around text streams. if you dump raw binary image bytes straight into stdout, a byte like `0x00 (null)`, `0x07 (bell)`, or `0x1b (escape)` will trick the terminal into thinking your escape sequence ended early or trigger random terminal behaviors.  
 to solve this, we will have to make somehow 3-part pipeline: a safe text encoder `base64.c`, a chunked raw-pixel streamer `render_kitty.c`, and an in-memory file streamer `render_iterm.c`.  
 
-[insert 1.high_level_architecture here]
+1.high_level_architecture
+<img width="1582" height="2480" alt="1 high_lvl_arch" src="https://github.com/user-attachments/assets/cb47679b-4130-4d8b-804f-e7007126fe19" />
+
 
 ## 1. turning raw bytes -to-> safe text[base64.c]
 
@@ -74,7 +76,9 @@ computers store images as raw bytes (`8 bits` per byte, values `0 to 255`). term
 `3 × 8 = 24`, and` 4 × 6 = 24`.    
 since `6 bits` can only hold numbers from `0 to 63` (2⁶ = 64), we can map every 6-bit number to a lookup table `b64_table`  containing 64 completely safe, printable characters `A-Z, a-z, 0-9, +, /`.  
 
-[insert 2.base64_bit_slicing here]
+2.base64_bit_slicing 
+<img width="3339" height="1052" alt="2 base64_slicing" src="https://github.com/user-attachments/assets/91710415-89e9-4785-a38c-d27a4824d176" />
+
 
 ### our way of writng base64
 
@@ -138,7 +142,9 @@ $$\frac{4096 \text{ base64 chars}}{4} \times 3 \text{ raw bytes} = 3072 \text{ r
 
 so in `kitty_send_rgba`, we slice our pixel buffer into `3072-byte` pieces `b64_chunk[4096 + 4]` gives us plenty of room for the `4,096` characters plus the null terminator).  
 
-[insert 3.kitty_chunking_flow here]
+3.kitty_chunking_flow 
+<img width="3726" height="1809" alt="3 kitty chunking flow" src="https://github.com/user-attachments/assets/e7f19cd7-c1b7-4730-ac36-14f6f7827b5c" />
+
 
 ##### 3. header keys on the first chunk (is_first):
 the very first packet tells kitty what kind of data is coming:  
@@ -166,7 +172,9 @@ if the user didn't ask for a custom background color `cfg->bg.mode == BG_NONE` a
 ##### 2. the in-memory png path (encode_frame_to_png):
 if we modified the pixels (for example, blending a checkerboard background or extracting individual frames from an animated gif), those pixels only exist as raw rgba arrays in memory. we have to compress them back into a valid png before iterm2 will accept them.  
 
-[insert 4.iterm_memory_callback here]
+4.iterm_memory_callback 
+<img width="8388" height="933" alt="5 iterm_mem_callback" src="https://github.com/user-attachments/assets/fdbed16c-89af-476b-84a5-77170bc73c26" />
+
 
 
 ###### how MemBuffer and mem_write_callback work
