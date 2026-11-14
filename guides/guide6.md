@@ -271,7 +271,8 @@ size_t base64_encode(const uint8_t *src, size_t src_len, char *dst, size_t dst_c
 In `src/base64.c`, define `static const char b64_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";`.
 #### 1.3
 In `base64_encode`:
-Loop while $i + 2 < \text{src\_len}$:
+Loop while $i + 2 < \text{src len}$
+:
 Combine 3 bytes into a 24-bit [uint_32-t taske 32 bit] integer:
 `triple = (src[i] << 16) | (src[i+1] << 8) | src[i+2];`
 Extract 4 six-bit chunks:
