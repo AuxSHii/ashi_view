@@ -55,3 +55,15 @@ static void mem_write_callback(void *context, void *data, int size){
 	memcpy(buf->data + buf->size, data , (size_t)size);
 	buf->size += (size_t)size; 
 }
+
+//encoding a frame to png[frame that we modify in a way for ex: background checkerborad etc]
+static uint8_t *encode_frame_to_png(const uint8_t *pixels, int w, int h, size_t *out_len){
+	MemBuffer buf = { .data = NULL, .size = 0, .cap = 0}; //init with 0
+    if(!stbi_write_png_to_func(mem_write_callback, &buf, w, h,4, pixels , 0)){
+    	free(buf.data);
+    	*out_len = 0;
+    	return NULL;
+    }
+    *out_len = buf.size;
+    return buf.data;
+}
