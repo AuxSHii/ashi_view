@@ -27,8 +27,12 @@ when a user launches a terminal, the terminal emulator injects identifying envir
 * **Standard Terminal Fallback:**
   * if none of the above signatures match (e.g. inside standard `tmux`, `xterm`, `alacritty`, `gnome-terminal`, or Windows Terminal), default safely to the universal Unicode half-block rasterizer (`PROTO_HALFBLOCK`).
 
-   
-     
+<img width="1538" height="2986" alt="protol_auto-detection" src="https://github.com/user-attachments/assets/345568df-6f4b-493e-842c-85c2ea691bf6" />
+
+
+<img width="640" height="360" alt="robust precise" src="https://github.com/user-attachments/assets/28f992ef-4eb2-40ac-9fb3-a1bb2328ac38" />
+
+	 
 ### robust CLI option parsing
 a production CLI program must:
 1. handle both flags (`-c`, `--clear`, `-l`, `--loop`) and flags with values (`-w 80`, `--width 80`).
