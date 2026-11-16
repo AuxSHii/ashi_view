@@ -67,3 +67,45 @@ static uint8_t *encode_frame_to_png(const uint8_t *pixels, int w, int h, size_t 
     *out_len = buf.size;
     return buf.data;
 }
+
+//applying background
+static uint8_t *apply_background(const uint8_t *src, int w, int h, const ashi_bg_color_t *bg)
+{
+    if (bg->mode == BG_NONE) return NULL;
+
+    size_t total_pixels = (size_t)w * (size_t)h;
+    uint8_t *out = malloc(total_pixels * 4);
+    if (!out) return NULL;
+
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            size_t idx = ((size_t)y * (size_t)w + (size_t)x) * 4;
+            uint8_t a = src[idx + 3];
+
+            if (a == 255) {
+                out[idx + 0] = src[idx + 0];
+                out[idx + 1] = src[idx + 1];
+                out[idx + 2] = src[idx + 2];
+                out[idx + 3] = 255;
+                continue;
+            }
+
+            uint8_t bg_r, bg_g, bg_b;
+            if (bg->mode == BG_CHECKER) {
+                int checker = ((x >> 4) ^ (y >> 4)) & 1;
+                bg_r = bg_g = bg_b = checker ? 0x38 : 0x24;
+            } else {
+                bg_r = bg->r;
+                bg_g = bg->g;
+                bg_b = bg->b;
+            }
+
+            uint32_t inv_a = 255 - a;
+            out[idx + 0] = (uint8_t)(((uint32_t)src[idx + 0] * a + (uint32_t)bg_r * inv_a + 127) / 255);
+            out[idx + 1] = (uint8_t)(((uint32_t)src[idx + 1] * a + (uint32_t)bg_g * inv_a + 127) / 255);
+            out[idx + 2] = (uint8_t)(((uint32_t)src[idx + 2] * a + (uint32_t)bg_b * inv_a + 127) / 255);
+            out[idx + 3] = 255;
+        }
+    }
+    return out;
+}
