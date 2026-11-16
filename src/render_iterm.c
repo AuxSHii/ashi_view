@@ -109,3 +109,46 @@ static uint8_t *apply_background(const uint8_t *src, int w, int h, const ashi_bg
     }
     return out;
 }
+
+
+//rendering final
+
+int ashi_render_iterm(const ashi_image_t *img, const ashi_config_t *cfg)
+{
+    if (!img || img->frame_count <= 0) {
+        return -1;
+    }
+
+    int term_cols = 80, term_rows = 24;
+    terminal_get_size(&term_cols, &term_rows);
+
+    int max_cols = cfg->target_cols > 0 ? cfg->target_cols : term_cols;
+    int max_rows = cfg->target_rows > 0 ? cfg->target_rows : (term_rows > 2 ? term_rows - 2 : term_rows);
+
+    int cols = 0, rows = 0;
+    ashi_calc_fit_dimensions(img->width, img->height, max_cols, max_rows, 2.0, &cols, &rows);
+
+    if (cfg->clear_screen) {
+        terminal_clear_screen();
+    }
+
+    //fast path: if no background blending requested, pass through original raw file
+    if (cfg->bg.mode == BG_NONE && img->raw_data && img->raw_size > 0) {
+        iterm_send_encoded(img->raw_data, img->raw_size, cols, rows);
+        return 0;
+    }
+
+    // single frame with background modification 
+    if (!img->is_animated || img->frame_count == 1) {
+        const uint8_t *px = img->frames[0].pixels;
+        uint8_t *blended = apply_background(px, img->width, img->height, &cfg->bg);
+
+        size_t png_len = 0;
+        uint8_t *png = encode_frame_to_png(blended ? blended : px, img->width, img->height, &png_len);
+        if (png) {
+            iterm_send_encoded(png, png_len, cols, rows);
+            free(png);
+        }
+        free(blended);
+        return 0;
+    }
