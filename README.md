@@ -122,6 +122,7 @@ ashi_view/
 ├── Makefile                 # posix / mingw build rules
 ├── CMakeLists.txt           # cross-platform cmake config
 ├── include/                 # public headers & structs
+├── guides/                  # guide files to read and learn to code ashi_view from scratch
 ├── src/
 │   ├── main.c               # cli flag parsing & entry point
 │   ├── protocol.c           # env var detection & renderer dispatch
