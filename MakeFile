@@ -1,21 +1,44 @@
-ifeq($(origin CC), defaut)
-	CC = gcc
+ifeq ($(origin CC),default)
+    CC = gcc
 endif
 
-CFLAGS ?= -std=c99 -03 -Wall -Wextra -pedantic -Wno-unused-parameter
-CPPFLAGS = -Iinclude -Ivendor 
+CFLAGS ?= -std=c99 -O3 -Wall -Wextra -pedantic -Wno-unused-parameter
+CPPFLAGS = -Iinclude -Ivendor
 LDLIBS = -lm
 
-
-SRC = src/stb_impl.c \
+SRC = src/base64.c \
+      src/image.c \
+      src/protocol.c \
+      src/render_halfblock.c \
+      src/render_iterm.c \
+      src/render_kitty.c \
+      src/resample.c \
+      src/stb_impl.c \
       src/terminal.c \
-	  src/resample.c \
+      src/main.c
 
 OBJ = $(SRC:.c=.o)
 BIN = ashi_view
 
-ifeq ($(OS) WINDOWS_NT)
-	BIN := ashi_view.exe
+ifeq ($(OS),Windows_NT)
+    BIN := ashi_view.exe
 endif
 
+.PHONY: all clean install
 
+all: $(BIN)
+
+$(BIN): $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $@ $(LDFLAGS) $(LDLIBS)
+
+src/%.o: src/%.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJ) $(BIN) ashi_view ashi_view.exe
+
+PREFIX ?= /usr/local
+
+install: $(BIN)
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(BIN) $(DESTDIR)$(PREFIX)/bin/
