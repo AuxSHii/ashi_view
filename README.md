@@ -136,7 +136,7 @@ ashi_view/
 │   ├── terminal.c           # cross-platform terminal size, clocks & raw input
 │   └── stb_impl.c           # single compilation unit for stb libraries
 ├── vendor/                  # bundled stb_image & stb_image_write
-└── samples/                 # test fixtures and sample generator script
+└── samples/                 # sample images + gifs
 ```
 
 ## license
