@@ -152,3 +152,71 @@ int ashi_render_iterm(const ashi_image_t *img, const ashi_config_t *cfg)
         free(blended);
         return 0;
     }
+
+
+    // animated GIF playback with frame pacing 
+    terminal_hide_cursor();
+
+    bool infinite = (cfg->loop_count < 0 || cfg->loop_count == 0);
+    int max_loops = infinite ? -1 : cfg->loop_count;
+    int current_loop = 0;
+
+    // pre-encode all frames to in-memory PNGs 
+    typedef struct {
+        uint8_t *data;
+        size_t len;
+    } PngFrame;
+
+    PngFrame *png_frames = malloc((size_t)img->frame_count * sizeof(PngFrame));
+    for (int f = 0; f < img->frame_count; ++f) {
+        const uint8_t *px = img->frames[f].pixels;
+        uint8_t *blended = apply_background(px, img->width, img->height, &cfg->bg);
+        size_t len = 0;
+        png_frames[f].data = encode_frame_to_png(blended ? blended : px, img->width, img->height, &len);
+        png_frames[f].len = len;
+        free(blended);
+    }
+
+    while (!g_terminal_interrupted && (max_loops < 0 || current_loop < max_loops)) {
+        for (int f = 0; f < img->frame_count; ++f) {
+            uint64_t t_start = terminal_time_ms();
+
+            if (current_loop > 0 || f > 0) {
+                terminal_cursor_up(rows + 1);
+            }
+
+            if (png_frames[f].data) {
+                iterm_send_encoded(png_frames[f].data, png_frames[f].len, cols, rows);
+            }
+
+            float speed = cfg->speed > 0.05f ? cfg->speed : 1.0f;
+            int delay = (int)((float)img->frames[f].delay_ms / speed);
+            if (delay < 10) delay = 10;
+
+            uint64_t elapsed = terminal_time_ms() - t_start;
+            if (elapsed < (uint64_t)delay) {
+                terminal_sleep_ms((uint32_t)((uint64_t)delay - elapsed));
+            }
+
+            char key = 0;
+            if (terminal_check_key(&key)) {
+                if (key == 'q' || key == 'Q' || key == 27) {
+                    g_terminal_interrupted = true;
+                    break;
+                }
+            }
+            if (g_terminal_interrupted) break;
+        }
+        current_loop++;
+    }
+
+    terminal_show_cursor();
+    fflush(stdout);
+
+    for (int f = 0; f < img->frame_count; ++f) {
+        free(png_frames[f].data);
+    }
+    free(png_frames);
+
+    return 0;
+}
