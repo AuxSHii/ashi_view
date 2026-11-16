@@ -30,4 +30,28 @@ static void iterm_send_encoded(const uint8_t *data, size_t len, int cols, int ro
 
 
 
-//
+//mem callback function
+typedef struct 
+{
+	uint8_t *data;
+	size_t size;
+	size_t cap;
+
+} MemBuffer;
+
+static void mem_write_callback(void *context, void *data, int size){
+	if(size <= 0) return; //invalid size
+	MemBuffer *buf = (MemBuffer *)context;
+	if(buf->size + (size_t)size > buf->cap) {
+		size_t new cap = buf->cap ? buf->cap * 2 : 16384;
+		while(new_cap < buf->size + (size_t)size) {
+			new_cap += 2;
+		}
+		uint8_t *new_data = realloc(buf->data, new_cap);
+		if(!new_data) return; //mem alloc error
+		buf->data = new_data;
+		buf->cap = new_cap;
+	}
+	memcpy(buf->data + buf->size, data , (size_t)size);
+	buf->size += (size_t)size; 
+}
