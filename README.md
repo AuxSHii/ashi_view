@@ -3,6 +3,10 @@ a fast, zero-dependency terminal image viewer written in c99.
 
 `ashi_view` inspects your terminal environment and picks the sharpest way to draw images. on modern gpu-accelerated terminals like kitty, ghostty, iterm2, and wezterm, it streams full-resolution native graphics. over ssh, inside `tmux`, or on classic consoles, it falls back to a custom unicode half-block renderer with truecolor support and anti-aliased resampling.
 
+#### features
+<img width="4371" height="2844" alt="features" src="https://github.com/user-attachments/assets/4be347c4-22dd-4575-8c78-3a18ccce2c85" />
+
+
 it handles transparent pngs (with checkerboard or custom hex backgrounds) and plays animated gifs without screen flicker.
 here's the end to end programe flow
 <img width="3267" height="5274" alt="final_flow" src="https://github.com/user-attachments/assets/87274d91-a21b-4497-9864-1f4c3b34919e" />
