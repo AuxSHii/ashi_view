@@ -4,11 +4,13 @@ a fast, zero-dependency terminal image viewer written in c99.
 `ashi_view` inspects your terminal environment and picks the sharpest way to draw images. on modern gpu-accelerated terminals like kitty, ghostty, iterm2, and wezterm, it streams full-resolution native graphics. over ssh, inside `tmux`, or on classic consoles, it falls back to a custom unicode half-block renderer with truecolor support and anti-aliased resampling.
 
 it handles transparent pngs (with checkerboard or custom hex backgrounds) and plays animated gifs without screen flicker.
+here's the end to end programe flow
+<img width="3267" height="5274" alt="final_flow" src="https://github.com/user-attachments/assets/87274d91-a21b-4497-9864-1f4c3b34919e" />
 
-[end to end arch diagram]
 
-1. will support unix + windows
-2. will support terminal protocols like kitty , iterm , windows cmd [legacy]
+
+1. it support unix + windows
+2. it support terminal protocols like kitty , iterm , windows cmd [legacy]
 
 i will also be writing a set of guides one can follow along , learn the concepts and code this app themselves..
 mostly in my guides : we have comppiled steps + theory + pseudocode for important steps and code sections..
@@ -30,11 +32,19 @@ these guides are not completely and puerly written by me...! although i wrote a 
 ### 2. cutting ansi bloat by up to 85%
 printing full truecolor escape codes for every cell on a large terminal pushes hundreds of kilobytes per frame, causing visible tearing. in `render_halfblock.c`, `ashi_view` tracks the terminal's active foreground and background rgb state. if an adjacent pixel shares the same color, we skip emitting the escape code altogether, then flush the entire frame in one bulk `fwrite` call through a 64 kb output buffer.
 
+<img width="837" height="454" alt="halfblock double pixel" src="https://github.com/user-attachments/assets/50cae688-d422-44e1-bec8-d05aa9cb94ac" />
+
+
+
+
 ### 3. area-averaging box resampler
 shrinking a 4k photo down to 80 columns with nearest-neighbor sampling turns fine lines into jagged noise. `resample.c` maps each target subpixel back to a fractional rectangle on the source image and averages every overlapping pixel weighted by its exact coverage area and alpha channel (preventing dark halos around transparent edges).
 
 ### 4. flicker-free gif playback
 instead of clearing the screen between gif frames, `ashi_view` pre-processes frames upfront, moves the cursor back to the top-left of the image (`\x1b[<rows>A\r`), and overwrites the previous frame in place. a monotonic clock measures how long each frame took to render and subtracts that time from the sleep delay so animations never drift out of sync.
+### 5. alpha blending
+<img width="3302" height="3835" alt="final_alpha-blending" src="https://github.com/user-attachments/assets/2bf98a8b-9915-4f81-820f-96f89a3abda0" />
+
 
 ---
 
