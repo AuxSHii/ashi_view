@@ -5,7 +5,7 @@ static const char b64_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 
 //takes length of source file --return--> no: of char req to encode src->base64
 
-size_t base64_encode_size(size_t src_len){
+size_t base64_encoded_size(size_t src_len){
 	return ((src_len + 2) / 3) * 4;
 	//as 3bytes [24bits] are splitted into 4 int of 6bits [every int gives a char]
 }
