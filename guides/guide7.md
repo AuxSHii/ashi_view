@@ -30,7 +30,8 @@ when a user launches a terminal, the terminal emulator injects identifying envir
 <img width="1538" height="2986" alt="protol_auto-detection" src="https://github.com/user-attachments/assets/345568df-6f4b-493e-842c-85c2ea691bf6" />
 
 
-<img width="640" height="360" alt="robust precise" src="https://github.com/user-attachments/assets/28f992ef-4eb2-40ac-9fb3-a1bb2328ac38" />
+<img width="640" height="360" alt="robust" src="https://github.com/user-attachments/assets/d6221454-2a6b-4ee2-bb86-f252e1c37847" />
+
 
 	 
 ### robust CLI option parsing
