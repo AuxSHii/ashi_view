@@ -3,9 +3,12 @@ a fast, zero-dependency terminal image viewer written in c99.
 
 `ashi_view` inspects your terminal environment and picks the sharpest way to draw images. on modern gpu-accelerated terminals like kitty, ghostty, iterm2, and wezterm, it streams full-resolution native graphics. over ssh, inside `tmux`, or on classic consoles, it falls back to a custom unicode half-block renderer with truecolor support and anti-aliased resampling.
 
-##### wanna learn how to code this yourself?
+### wanna learn how to code this yourself?
 go to [guides](guides) folder and start from guide 1 to 7...
 
+mostly theory in these guides is me filling up the  gaps i had in my knowledge base , i googled, i used ai etc in order to fill those gaps and learn then i compiled these information too in the guides.  
+**NOTE**: i used ai in order to fill my knowledge gaps and compiled those same info in these guide files to help a beginner who will be reading it , as i myself am a learner & a beginner too.  
+these guides are not completely and puerly written by me...! although i wrote a major part of them but still i wanted to be transparent with anyone trusting this repo to learn something..  
 #### features
 <img width="4371" height="2844" alt="features" src="https://github.com/user-attachments/assets/4be347c4-22dd-4575-8c78-3a18ccce2c85" />
 
@@ -19,12 +22,7 @@ here's the end to end programe flow
 1. it support unix + windows
 2. it support terminal protocols like kitty , iterm , windows cmd [legacy]
 
-i wrote a set of guides one can follow along , learn the concepts and code this app themselves..
-mostly in my guides : we have comppiled steps + theory + pseudocode for important steps and code sections..
 
-mostly theory in these guides is me filling up the  gaps i had in my knowledge base , i googled, i used ai etc in order to fill those gaps and learn then i compiled these information too in the guides.  
-**NOTE**: i used ai in order to fill my knowledge gaps and compiled those same info in these guide files to help a beginner who will be reading it , as i myself am a learner & a beginner too.  
-these guides are not completely and puerly written by me...! although i wrote a major part of them but still i wanted to be transparent with anyone trusting this repo to learn something..  
 
 
 ## how it works under the hood
